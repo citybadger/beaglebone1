@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Hack Manhattan Environmental Monitoring Station</title>
+    <script type="text/javascript" src="smoothie.js"></script>
+    <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+  </head>
+  <body>
+    <h1>Hack Manhattan Enviromental Monitoring Station</h1>
+    <canvas id="mycanvas" width="400" height="100"></canvas>
+    <br>
+    <script>
+      var line1 = new TimeSeries();
+      var socket = io.connect('http://192.168.42.163:8009');
+      socket.on('temp2',function(temp) {
+        document.getElementById("temp1Display").innerHTML=temp;
+	    line1.append(new Date().getTime(), temp);
+      });
+      
+      socket.on('switchStateChange',function(switchStatus) {
+        document.getElementById("switchStatusDisplay").innerHTML=switchStatus;
+      });
+      
+      socket.on('controlMode',function(controlMode) {
+        document.getElementById("controlModeDisplay").innerHTML=controlMode; 
+      });
+      
+      socket.on('upperlimit',function(upper) {
+        document.getElementById("UpperLimitTextbox").value=upper;
+      });
+      
+      socket.on('lowerlimit',function(lower) {
+        document.getElementById("LowerLimitTextbox").value=lower;
+     });      
+      
+      
+      var smoothie = new SmoothieChart({ grMid: { strokeStyle: 'rgb(125, 0, 0)', fillStyle: 'rgb(60, 0, 0)', lineWidth: 1, millisPerLine: 1000, millisPerPixel: 200, verticalSections: 6 } });
+      
+      smoothie.addTimeSeries(line1, { strokeStyle: 'rgb(0, 255, 0)', fillStyle: 'rgba(0, 255, 0, 0.4)', lineWidth: 3 });
+      
+      smoothie.streamTo(document.getElementById("mycanvas"));
+      
+      function controlModeButtonPress(controlMode) {
+        socket.emit('controlMode',controlMode);
+      }
+ 
+      function submitLimits(lower,upper) {
+        socket.emit('upperlimit',upper);
+        socket.emit('lowerlimit',lower);
+      }
+      
+      
+    </script>
+ 
+    <br><label>Lower Limit: <input type="text" name="lowerLimit" id="LowerLimitTextbox" />C</label>
+    <br><label>Upper Limit: <input type="text" name="upperLimit" id="UpperLimitTextbox" />C</label>
+    <br><button type="button" onclick="submitLimits(document.getElementById("LowerLimitTextbox").value,document.getElementById("UpperLimitTextbox").value)">Submit</button>
+    <br>Temperature(C): <span id="temp1Display">Unknown</span>
+    <br>Switch Status: <span id="switchStatusDisplay">Unknown</span>
+    <br>Control Mode: <span id="controlModeDisplay">Unknown</span>
+    <br>
+    <button type="button" onclick="controlModeButtonPress('auto')">Auto
+</button>
+    <button type="button" onclick="controlModeButtonPress('manualOn')">Manual On</button>
+    <button type="button" onclick="controlModeButtonPress('manualOff')">Manual Off</button>
+  </body>
+</html>

@@ -1,0 +1,30 @@
+var events = require('events');
+var misc = require('./build/Release/misc');
+misc.Pollpri.prototype.__proto__ = events.EventEmitter.prototype;
+
+if(process.argv.length > 2) {
+    var file = process.argv[2];
+    var gpioPoll = new misc.Pollpri(file);
+    var gpioHandler = function(value) {
+        value = value.replace(/\s*$/, '');
+        console.log(''+value);
+    };
+    gpioPoll.on('edge', gpioHandler);
+} else {
+    var onMessage = function(m) {
+        //console.log('Attaching handler to ' + m.file);
+        var gpioPoll = new misc.Pollpri(m.file);
+        var gpioHandler = function(value) {
+            //console.log('Got interrupt event');
+            try {
+                process.send({'value': value});
+            } catch(ex) {
+                console.error('Unable to send message to parent process: ' + ex);
+                process.exit(1);
+            }
+        };
+        gpioPoll.on('edge', gpioHandler);
+    };
+    process.on('message', onMessage);
+    //console.log('Started GPIO interrupt listener');
+}
